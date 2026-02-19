@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>VSA Tết Photo Booth 🌺</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Playfair+Display:wght@700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --red:#c0392b; --deep:#6b1a1a; --gold:#f0c040; --gold2:#b8860b; --cream:#fdf3e3; --paper:#fff8ee; --peach:#f9c784; }
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; min-height:100vh; background:var(--deep); font-family:'Space Mono',monospace; color:var(--cream); overscroll-behavior:none; }
+
+  /* ── START SCREEN ── */
+  #startScreen { position:fixed; inset:0; z-index:100; background:var(--deep); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; }
+  .lanterns { font-size:2rem; letter-spacing:.6rem; animation:sway 2s ease-in-out infinite alternate; }
+  @keyframes sway { from{transform:rotate(-4deg)} to{transform:rotate(4deg)} }
+  .start-card { border:3px solid var(--gold); padding:44px 48px 40px; text-align:center; position:relative; max-width:480px; width:100%; background:rgba(100,20,20,.5); }
+  .corner { position:absolute; color:var(--gold); font-size:1rem; }
+  .tl{top:8px;left:10px} .tr{top:8px;right:10px} .bl{bottom:8px;left:10px} .br{bottom:8px;right:10px}
+  .start-org { font-size:.6rem; letter-spacing:.3em; color:var(--peach); text-transform:uppercase; margin-bottom:8px; }
+  .start-h1 { font-family:'Playfair Display',serif; font-size:clamp(2rem,6vw,3rem); color:var(--gold); line-height:1.1; margin-bottom:6px; }
+  .start-sub { font-size:.85rem; color:var(--peach); margin-bottom:30px; }
+  .btn-gold { display:inline-block; padding:15px 48px; background:var(--gold); color:var(--deep); border:none; font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; letter-spacing:.08em; cursor:pointer; -webkit-appearance:none; }
+  .btn-gold:disabled { opacity:.45; cursor:not-allowed; }
+  .start-note { font-size:.58rem; color:var(--peach); opacity:.65; margin-top:12px; }
+  #errMsg { display:none; color:#ffaaaa; font-size:.7rem; margin-top:12px; line-height:1.7; max-width:300px; margin-left:auto; margin-right:auto; }
+
+  /* ── APP ── */
+  #app { display:none; padding:28px 16px 60px; }
+  .app-header { text-align:center; margin-bottom:24px; }
+  .app-header .dec { font-size:1.4rem; letter-spacing:.5rem; margin-bottom:6px; }
+  .app-header h1 { font-family:'Playfair Display',serif; font-size:clamp(1.6rem,4vw,2.8rem); color:var(--gold); text-shadow:0 2px 12px rgba(0,0,0,.5); }
+  .app-header p { font-size:.58rem; color:var(--peach); letter-spacing:.2em; text-transform:uppercase; margin-top:5px; }
+  .layout { display:flex; gap:32px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+
+  /* ── CAMERA ── */
+  .cam-side { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .cam-wrap { position:relative; width:min(360px,90vw); aspect-ratio:4/3; border:3px solid var(--gold); background:#000; overflow:hidden; box-shadow:6px 6px 0 var(--gold2),0 10px 40px rgba(0,0,0,.6); }
+  .lant { position:absolute; top:7px; z-index:3; font-size:1.1rem; pointer-events:none; }
+  .lant.l{left:8px} .lant.r{right:8px}
+  #videoEl { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  #countdownEl { position:absolute; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; font-family:'Playfair Display',serif; font-size:7rem; color:var(--gold); text-shadow:0 0 30px rgba(240,192,64,.9); pointer-events:none; opacity:0; transition:opacity .2s; }
+  #flashEl { position:absolute; inset:0; background:white; opacity:0; pointer-events:none; z-index:6; }
+
+  /* ── CONTROLS ── */
+  .controls { display:flex; flex-direction:column; align-items:center; gap:10px; width:min(360px,90vw); }
+  .filter-row { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+  .f-btn { padding:5px 11px; border:1.5px solid rgba(240,192,64,.6); background:transparent; color:var(--gold); font-family:'Space Mono',monospace; font-size:.6rem; cursor:pointer; -webkit-appearance:none; }
+  .f-btn.on { background:var(--gold); color:var(--deep); border-color:var(--gold); }
+  .progress { display:flex; gap:6px; align-items:center; }
+  .progress span { font-size:.58rem; color:var(--peach); margin-right:4px; }
+  .pip { width:30px; height:5px; background:rgba(240,192,64,.15); border:1px solid rgba(240,192,64,.5); transition:background .3s; }
+  .pip.on { background:var(--gold); }
+  #shootBtn { width:100%; padding:15px; background:var(--gold); color:var(--deep); border:none; font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; cursor:pointer; -webkit-appearance:none; }
+  #shootBtn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ── STICKERS ── */
+  #stickerPanel { display:none; flex-wrap:wrap; gap:5px; justify-content:center; padding:10px; border:1px dashed rgba(240,192,64,.35); width:100%; }
+  .stk-label { font-size:.52rem; letter-spacing:.15em; color:var(--gold); width:100%; text-align:center; text-transform:uppercase; }
+  .stk-btn { background:none; border:1.5px solid transparent; cursor:pointer; font-size:1.3rem; padding:4px; -webkit-appearance:none; }
+  .stk-btn.on { border-color:var(--gold); background:rgba(240,192,64,.15); }
+
+  /* ── FRAME PICKER ── */
+  #framePicker { display:none; flex-wrap:wrap; gap:10px; justify-content:center; width:100%; padding:10px 0; }
+  .frame-label { font-size:.52rem; letter-spacing:.15em; color:var(--gold); width:100%; text-align:center; text-transform:uppercase; margin-bottom:2px; }
+  .frame-opt { display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; }
+  .frame-swatch { width:36px; height:52px; border-radius:3px; overflow:hidden; border:2px solid transparent; transition:border-color .2s; }
+  .frame-opt.active .frame-swatch { border-color:var(--gold); }
+  .frame-name { font-size:.42rem; color:var(--peach); letter-spacing:.04em; font-family:'Cormorant Garamond',serif; font-style:italic; }
+
+  /* ── ACTION BUTTONS ── */
+  #actionRow { display:none; gap:10px; width:100%; }
+  .act-btn { flex:1; padding:11px; border:1.5px solid var(--gold); background:transparent; font-family:'Space Mono',monospace; font-size:.62rem; color:var(--gold); cursor:pointer; -webkit-appearance:none; }
+  .act-btn:active { background:var(--gold); color:var(--deep); }
+
+  /* ── STRIP ── */
+  .strip-side { position:relative; flex-shrink:0; }
+  .strip-shadow { position:absolute; top:8px; left:8px; right:-8px; bottom:-8px; background:rgba(0,0,0,.25); z-index:0; }
+  .strip-card { background:var(--paper); padding:16px 14px 20px; width:190px; position:relative; z-index:1; }
+  .strip-head { text-align:center; padding-bottom:10px; margin-bottom:8px; border-bottom:1px solid rgba(192,57,43,.2); }
+  .strip-head .vsa { font-family:'Cormorant Garamond',serif; font-size:.95rem; font-weight:700; color:var(--red); letter-spacing:.18em; text-transform:uppercase; }
+  .strip-head .sub { font-family:'Cormorant Garamond',serif; font-size:.62rem; font-style:italic; color:var(--gold2); letter-spacing:.08em; margin-top:3px; }
+  .strip-photos { display:flex; flex-direction:column; gap:6px; }
+  .slot { width:162px; height:122px; background:#e8d5c0; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+  .slot .ph-label { font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-style:italic; opacity:.22; color:var(--red); pointer-events:none; }
+  .slot img { width:100%; height:100%; object-fit:cover; display:none; pointer-events:none; }
+  .slot.filled img { display:block; } .slot.filled .ph-label { display:none; }
+  .slot.target { cursor:crosshair; }
+  /* filters — all applied at capture time so preview class is f-none */
+  .slot img.f-none{filter:none}
+  .slot img.f-warm{filter:sepia(50%) saturate(1.4) brightness(1.05)}
+  .slot img.f-soft{filter:brightness(1.12) contrast(.88) saturate(.8)}
+  .slot img.f-vivid{filter:saturate(1.7) contrast(1.1)}
+  .slot img.f-bw{filter:grayscale(100%)}
+  .slot img.f-cool{filter:sepia(40%) saturate(1.8) hue-rotate(320deg) contrast(1.2) brightness(0.9)}
+  .stk-overlay { position:absolute; inset:0; pointer-events:none; z-index:2; }
+  .stk-item { position:absolute; font-size:1.4rem; line-height:1; transform:translate(-50%,-50%); }
+  .strip-foot { margin-top:10px; text-align:center; }
+  .strip-foot .flowers { font-size:.85rem; letter-spacing:.12rem; }
+  .strip-foot .date { font-family:'Cormorant Garamond',serif; font-style:italic; font-size:.52rem; color:var(--red); letter-spacing:.1em; display:block; margin-top:4px; }
+
+  /* ── SAVE OVERLAY ── */
+  #saveOverlay { display:none; position:fixed; inset:0; z-index:9999; background:rgba(10,2,2,.97); flex-direction:column; align-items:center; overflow-y:auto; padding:24px 16px 40px; gap:16px; }
+  #saveOverlay .save-tip { font-family:'Cormorant Garamond',serif; color:var(--peach); font-size:17px; text-align:center; line-height:1.7; font-style:italic; }
+  #saveOverlay .save-tip strong { color:var(--gold); font-style:normal; }
+  #saveImg { max-width:260px; width:100%; height:auto; display:block; box-shadow:0 10px 50px rgba(0,0,0,.7); }
+  #closeOverlay { padding:12px 36px; background:var(--gold); color:var(--deep); border:none; font-family:'Playfair Display',serif; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
+
+  canvas { display:none; }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div class="lanterns">🏮 🌸 🏮</div>
+  <div class="start-card">
+    <span class="corner tl">✦</span><span class="corner tr">✦</span>
+    <span class="corner bl">✦</span><span class="corner br">✦</span>
+    <p class="start-org">Vietnamese Student Association</p>
+    <h1 class="start-h1">Tết Photo Booth</h1>
+    <p class="start-sub">🌺 Chúc Mừng Năm Mới 🌺</p>
+    <button class="btn-gold" id="startBtn">📸 Bắt Đầu · Start</button>
+    <p class="start-note">Tap Allow when Safari asks for camera</p>
+    <p id="errMsg"></p>
+  </div>
+  <div class="lanterns">🌸 🏮 🌸</div>
+</div>
+
+<div id="app">
+  <canvas id="canvas"></canvas>
+  <canvas id="filterCanvas"></canvas>
+
+  <div class="app-header">
+    <div class="dec">🏮 🌸 🏮</div>
+    <h1>VSA Tết Photo Booth</h1>
+    <p>🌺 Chúc Mừng Năm Mới · 4-Strip Photos 🌺</p>
+  </div>
+
+  <div class="layout">
+
+    <!-- Camera side -->
+    <div class="cam-side">
+      <div class="cam-wrap">
+        <span class="lant l">🏮</span><span class="lant r">🏮</span>
+        <video id="videoEl" autoplay playsinline muted webkit-playsinline></video>
+        <div id="countdownEl"></div>
+        <div id="flashEl"></div>
+      </div>
+
+      <div class="controls">
+        <div class="filter-row">
+          <button class="f-btn on" data-f="none">Original</button>
+          <button class="f-btn" data-f="warm">Warm</button>
+          <button class="f-btn" data-f="soft">Soft</button>
+          <button class="f-btn" data-f="vivid">Vivid</button>
+          <button class="f-btn" data-f="bw">B&amp;W</button>
+          <button class="f-btn" data-f="cool">Film</button>
+        </div>
+
+        <div class="progress">
+          <span>Photos:</span>
+          <div class="pip" id="p0"></div><div class="pip" id="p1"></div>
+          <div class="pip" id="p2"></div><div class="pip" id="p3"></div>
+        </div>
+
+        <button id="shootBtn">📷 Take Photo (0 / 4)</button>
+
+        <!-- Stickers -->
+        <div id="stickerPanel">
+          <span class="stk-label">✦ Pick a sticker then tap a photo ✦</span>
+          <button class="stk-btn" data-s="🏮">🏮</button>
+          <button class="stk-btn" data-s="🌸">🌸</button>
+          <button class="stk-btn" data-s="🌺">🌺</button>
+          <button class="stk-btn" data-s="✨">✨</button>
+          <button class="stk-btn" data-s="🎆">🎆</button>
+          <button class="stk-btn" data-s="💛">💛</button>
+          <button class="stk-btn" data-s="🍊">🍊</button>
+          <button class="stk-btn" data-s="🐉">🐉</button>
+          <button class="stk-btn" data-s="💕">💕</button>
+          <button class="stk-btn" data-s="⭐">⭐</button>
+          <button class="stk-btn" data-s="🎀">🎀</button>
+          <button class="stk-btn" data-s="🦋">🦋</button>
+        </div>
+
+        <!-- Frame picker -->
+        <div id="framePicker">
+          <span class="frame-label">✦ Choose Frame ✦</span>
+          <div class="frame-opt active" data-frame="tet">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#c0392b 0%,#fff8ee 35%,#fff8ee 65%,#c0392b 100%);"></div>
+            <span class="frame-name">🏮 Đỏ</span>
+          </div>
+          <div class="frame-opt" data-frame="gold">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#b8860b 0%,#fffbe6 35%,#fffbe6 65%,#b8860b 100%);"></div>
+            <span class="frame-name">✨ Vàng</span>
+          </div>
+          <div class="frame-opt" data-frame="peach">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#e8829a 0%,#fff5f8 35%,#fff5f8 65%,#e8829a 100%);"></div>
+            <span class="frame-name">🌸 Đào</span>
+          </div>
+          <div class="frame-opt" data-frame="dragon">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#1a5c2e 0%,#f0fff4 35%,#f0fff4 65%,#1a5c2e 100%);"></div>
+            <span class="frame-name">🐉 Rồng</span>
+          </div>
+          <div class="frame-opt" data-frame="night">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#2a0a4a 0%,#0d0d1a 35%,#0d0d1a 65%,#2a0a4a 100%);"></div>
+            <span class="frame-name">🎆 Pháo</span>
+          </div>
+          <div class="frame-opt" data-frame="spring">
+            <div class="frame-swatch" style="background:linear-gradient(160deg,#f77f00 0%,#fff9f0 35%,#fff9f0 65%,#f77f00 100%);"></div>
+            <span class="frame-name">🍊 Xuân</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div id="actionRow">
+          <button class="act-btn" id="retakeBtn">↩ Retake</button>
+          <button class="act-btn" id="saveBtn">↓ Save Strip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strip preview -->
+    <div class="strip-side">
+      <div class="strip-shadow"></div>
+      <div class="strip-card">
+        <div class="strip-head">
+          <div class="vsa">VSA · TẾT 2026</div>
+          <div class="sub">🌺 Chúc Mừng Năm Mới 🌺</div>
+        </div>
+        <div class="strip-photos">
+          <div class="slot" id="slot0"><span class="ph-label">i</span><img id="img0"><div class="stk-overlay" id="stk0"></div></div>
+          <div class="slot" id="slot1"><span class="ph-label">ii</span><img id="img1"><div class="stk-overlay" id="stk1"></div></div>
+          <div class="slot" id="slot2"><span class="ph-label">iii</span><img id="img2"><div class="stk-overlay" id="stk2"></div></div>
+          <div class="slot" id="slot3"><span class="ph-label">iv</span><img id="img3"><div class="stk-overlay" id="stk3"></div></div>
+        </div>
+        <div class="strip-foot">
+          <div class="flowers">🏮 🌸 🏮</div>
+          <span class="date" id="stripDate"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Save overlay -->
+<div id="saveOverlay">
+  <p class="save-tip">Press &amp; hold the image<br>then tap <strong>Save to Photos</strong> 📥</p>
+  <img id="saveImg" src="" alt="Your photo strip">
+  <button id="closeOverlay">✕ Close</button>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+
+  var count=0, photos=[], activeF='none', activeS=null, shooting=false;
+
+  $('stripDate').textContent = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  var FCSS={
+    'none':'none',
+    'warm':'sepia(50%) saturate(1.4) brightness(1.05)',
+    'soft':'brightness(1.12) contrast(.88) saturate(.8)',
+    'vivid':'saturate(1.7) contrast(1.1)',
+    'bw':'grayscale(100%)',
+    'cool':'sepia(40%) saturate(1.8) hue-rotate(320deg) contrast(1.2) brightness(0.9)'
+  };
+
+  /* ── START ── */
+  $('startBtn').addEventListener('click', function(){
+    var btn=this; btn.disabled=true; btn.textContent='...';
+    $('errMsg').style.display='none';
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showErr('Please open in Safari.');return;}
+    navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}},audio:false})
+      .then(function(s){
+        var vid=$('videoEl'); vid.srcObject=s;
+        vid.play().then(function(){
+          $('startScreen').style.display='none';
+          $('app').style.display='block';
+        }).catch(function(e){showErr('Play failed: '+e.message);});
+      }).catch(function(e){
+        var m='Camera error: '+e.message;
+        if(e.name==='NotAllowedError') m='Camera denied. Settings → Safari → Camera → Allow, then reload.';
+        else if(e.name==='NotFoundError') m='No camera found.';
+        showErr(m);
+      });
+  });
+  function showErr(m){ $('startBtn').disabled=false; $('startBtn').textContent='📸 Try Again'; $('errMsg').textContent=m; $('errMsg').style.display='block'; }
+
+  /* ── FILTERS ── */
+  document.querySelectorAll('.f-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.f-btn').forEach(function(b){b.classList.remove('on');});
+      this.classList.add('on'); activeF=this.dataset.f;
+      $('videoEl').style.filter=FCSS[activeF]||'none';
+    });
+  });
+
+  /* ── SHOOT — auto fires all 4 ── */
+  $('shootBtn').addEventListener('click',function(){
+    if(shooting||count>=4) return;
+    shooting=true; $('shootBtn').disabled=true;
+    $('shootBtn').textContent='📸 Get ready...';
+    setTimeout(function(){tick(3);},800);
+  });
+
+  function tick(n){
+    var el=$('countdownEl'); el.style.opacity='1'; el.textContent=n;
+    if(n===0){
+      el.textContent='🌸';
+      setTimeout(function(){el.style.opacity='0'; capturePhoto();},380); return;
+    }
+    setTimeout(function(){tick(n-1);},900);
+  }
+
+  function capturePhoto(){
+    var fl=$('flashEl'); fl.style.opacity='1';
+    setTimeout(function(){fl.style.opacity='0';},180);
+
+    var vid=$('videoEl'), canvas=$('canvas');
+    var vw=vid.videoWidth||640, vh=vid.videoHeight||480;
+    canvas.width=vw; canvas.height=vh;
+    var ctx=canvas.getContext('2d');
+    ctx.save(); ctx.translate(vw,0); ctx.scale(-1,1);
+    ctx.drawImage(vid,0,0,vw,vh);
+    ctx.restore();
+
+    /* bake filter onto second canvas */
+    var fc=$('filterCanvas'); fc.width=vw; fc.height=vh;
+    var fctx=fc.getContext('2d');
+    fctx.filter=FCSS[activeF]||'none';
+    fctx.drawImage(canvas,0,0);
+
+    var url=fc.toDataURL('image/jpeg',0.95);
+    photos.push({url:url});
+
+    var img=$('img'+count); img.src=url; img.className='f-none';
+    $('slot'+count).classList.add('filled');
+    $('p'+count).classList.add('on');
+    count++;
+
+    if(count<4){
+      $('shootBtn').textContent='✓ '+count+' / 4 — next in 2s...';
+      setTimeout(function(){tick(3);},2000);
+    } else {
+      shooting=false;
+      $('shootBtn').textContent='✓ Strip Complete!';
+      $('shootBtn').disabled=true;
+      $('stickerPanel').style.display='flex';
+      $('framePicker').style.display='flex';
+      $('actionRow').style.display='flex';
+    }
+  }
+
+  /* ── STICKERS ── */
+  document.querySelectorAll('.stk-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      if(activeS===this.dataset.s){activeS=null;this.classList.remove('on');}
+      else{document.querySelectorAll('.stk-btn').forEach(function(b){b.classList.remove('on');});activeS=this.dataset.s;this.classList.add('on');}
+      for(var i=0;i<4;i++){
+        if(activeS&&i<count) $('slot'+i).classList.add('target');
+        else $('slot'+i).classList.remove('target');
+      }
+    });
+  });
+
+  for(var i=0;i<4;i++){
+    (function(idx){
+      $('slot'+idx).addEventListener('click',function(e){
+        if(!activeS||idx>=count) return;
+        var r=this.getBoundingClientRect();
+        var xp=((e.clientX-r.left)/r.width*100).toFixed(2);
+        var yp=((e.clientY-r.top)/r.height*100).toFixed(2);
+        var sp=document.createElement('span');
+        sp.className='stk-item'; sp.textContent=activeS;
+        sp.style.left=xp+'%'; sp.style.top=yp+'%';
+        $('stk'+idx).appendChild(sp);
+      });
+    })(i);
+  }
+
+  /* ── RETAKE ── */
+  $('retakeBtn').addEventListener('click',function(){
+    count=0; photos=[]; activeS=null;
+    for(var i=0;i<4;i++){
+      $('slot'+i).classList.remove('filled','target');
+      $('img'+i).src=''; $('img'+i).className='';
+      $('p'+i).classList.remove('on');
+      $('stk'+i).innerHTML='';
+    }
+    document.querySelectorAll('.stk-btn').forEach(function(b){b.classList.remove('on');});
+    $('shootBtn').disabled=false; $('shootBtn').textContent='📷 Take Photo (0 / 4)';
+    $('stickerPanel').style.display='none';
+    $('framePicker').style.display='none';
+    $('actionRow').style.display='none';
+    applyFrameToStrip('tet'); activeFrame='tet';
+    document.querySelectorAll('.frame-opt').forEach(function(o){o.classList.remove('active');});
+    document.querySelector('[data-frame="tet"]').classList.add('active');
+  });
+
+  /* ── FRAMES ── */
+  var FRAMES={
+    'tet':    { paper:'#fff8ee', title:'#c0392b',  sub:'#b8860b', date:'#c0392b',  foot:'🏮 🌸 🏮', subtext:'🌺 Chúc Mừng Năm Mới 🌺', divider:'rgba(192,57,43,.2)' },
+    'gold':   { paper:'#fffbe6', title:'#7a5500',  sub:'#b8860b', date:'#7a5500',  foot:'✨ 💛 ✨', subtext:'🌟 Chúc Mừng Năm Mới 🌟', divider:'rgba(184,134,11,.2)' },
+    'peach':  { paper:'#fff5f8', title:'#a8294a',  sub:'#d4607a', date:'#a8294a',  foot:'🌸 🌺 🌸', subtext:'🌸 Chúc Mừng Năm Mới 🌸', divider:'rgba(200,80,120,.2)' },
+    'dragon': { paper:'#f2fff6', title:'#1a5c2e',  sub:'#2ecc71', date:'#1a5c2e',  foot:'🐉 🌿 🐉', subtext:'🐉 Năm Bính Ngọ · Year of the Dragon', divider:'rgba(26,92,46,.2)' },
+    'night':  { paper:'#0d0d1a', title:'#f0c040',  sub:'#c084e8', date:'#f9c784',  foot:'🎆 ✨ 🎆', subtext:'🎆 Chúc Mừng Năm Mới 🎆', divider:'rgba(240,192,64,.2)' },
+    'spring': { paper:'#fff9f0', title:'#c44a00',  sub:'#f77f00', date:'#c44a00',  foot:'🍊 🌼 🍊', subtext:'🍊 Chúc Mừng Năm Mới 🍊', divider:'rgba(200,90,0,.2)' }
+  };
+  var activeFrame='tet';
+
+  document.querySelectorAll('.frame-opt').forEach(function(opt){
+    opt.addEventListener('click',function(){
+      document.querySelectorAll('.frame-opt').forEach(function(o){o.classList.remove('active');});
+      this.classList.add('active');
+      activeFrame=this.dataset.frame;
+      applyFrameToStrip(activeFrame);
+    });
+  });
+
+  function applyFrameToStrip(fid){
+    var f=FRAMES[fid];
+    var card=document.querySelector('.strip-card');
+    card.style.background=f.paper;
+    card.style.borderTop='none';
+    card.style.borderBottom='none';
+    card.querySelector('.vsa').style.color=f.title;
+    card.querySelector('.sub').style.color=f.sub;
+    card.querySelector('.sub').textContent=f.subtext;
+    $('stripDate').style.color=f.date;
+    card.querySelector('.flowers').style.color=f.title;
+    card.querySelector('.flowers').textContent=f.foot;
+    card.querySelector('.strip-head').style.borderBottomColor=f.divider;
+    /* slot placeholder text color */
+    document.querySelectorAll('.ph-label').forEach(function(el){el.style.color=f.title;});
+  }
+
+  /* ── SAVE ── */
+  $('saveBtn').addEventListener('click',function(){
+    var btn=this; btn.textContent='⏳ Saving...'; btn.disabled=true;
+
+    var SC=3;
+    var TW=190, PH=14, PT=16, PB=20;
+    var HEAD=58, FOOT=40, SW=162, SH=122, SG=6;
+    var TH=PT+HEAD+(SH+SG)*4-SG+FOOT+PB;
+
+    var out=document.createElement('canvas');
+    out.width=TW*SC; out.height=TH*SC;
+    var oc=out.getContext('2d');
+    oc.scale(SC,SC);
+
+    var fr=FRAMES[activeFrame];
+
+    /* paper background */
+    oc.fillStyle=fr.paper; oc.fillRect(0,0,TW,TH);
+
+    /* header */
+    var hy=PT;
+    oc.fillStyle=fr.title;
+    oc.font='700 12px "Cormorant Garamond", serif';
+    oc.textAlign='center'; oc.textBaseline='top';
+    oc.fillText('VSA · TẾT 2026',TW/2,hy+4);
+    oc.fillStyle=fr.sub;
+    oc.font='italic 8px "Cormorant Garamond", serif';
+    oc.fillText(fr.subtext,TW/2,hy+22);
+    /* divider */
+    oc.strokeStyle=fr.divider; oc.lineWidth=0.5;
+    oc.beginPath(); oc.moveTo(PH,hy+38); oc.lineTo(TW-PH,hy+38); oc.stroke();
+
+    /* photos — load all images first, then draw */
+    var sy=PT+HEAD;
+    var loaded=0;
+    var total=photos.length;
+
+    function drawStickers(i,y){
+      $('stk'+i).querySelectorAll('.stk-item').forEach(function(s){
+        var lp=parseFloat(s.style.left)/100;
+        var tp=parseFloat(s.style.top)/100;
+        oc.font='18px serif'; oc.textAlign='center'; oc.textBaseline='middle';
+        oc.fillText(s.textContent,PH+lp*SW,y+tp*SH);
+      });
+    }
+
+    function drawFooterAndSave(){
+      var fy=sy+4*(SH+SG)-SG;
+      oc.fillStyle=fr.title;
+      oc.font='15px serif'; oc.textAlign='center'; oc.textBaseline='top';
+      oc.fillText(fr.foot,TW/2,fy+8);
+      oc.fillStyle=fr.date;
+      oc.font='italic 8px "Cormorant Garamond", serif';
+      oc.fillText($('stripDate').textContent,TW/2,fy+26);
+      $('saveImg').src=out.toDataURL('image/png');
+      $('saveOverlay').style.display='flex';
+      btn.textContent='↓ Save Strip'; btn.disabled=false;
+    }
+
+    function drawPhoto(i, im){
+      var y=sy+i*(SH+SG);
+      oc.fillStyle='#e8d5c0'; oc.fillRect(PH,y,SW,SH);
+      var srcW=im.naturalWidth, srcH=im.naturalHeight;
+      var slotAR=SW/SH, srcAR=srcW/srcH;
+      var cropX,cropY,cropW,cropH;
+      if(srcAR>slotAR){ cropH=srcH; cropW=srcH*slotAR; cropX=(srcW-cropW)/2; cropY=0; }
+      else { cropW=srcW; cropH=srcW/slotAR; cropX=0; cropY=(srcH-cropH)/2; }
+      oc.drawImage(im,cropX,cropY,cropW,cropH,PH,y,SW,SH);
+      drawStickers(i,y);
+      loaded++;
+      if(loaded===total) drawFooterAndSave();
+    }
+
+    if(total===0){ drawFooterAndSave(); return; }
+
+    photos.forEach(function(p,i){
+      var im=new Image();
+      im.onload=function(){ drawPhoto(i,im); };
+      im.src=p.url;
+    });
+  });
+
+  $('closeOverlay').addEventListener('click',function(){
+    $('saveOverlay').style.display='none';
+  });
+
+})();
+</script>
+</body>
+</html>
